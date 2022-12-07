@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node-dev --respawn --transpile-only day-$DAY/index.ts",
+    "start": "ts-node-dev --respawn --transpile-only day-$DAY/run.ts",
     "test": "jest --watch day-$DAY/index.test.ts"
   },
   "repository": {

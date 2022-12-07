@@ -1,12 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { serialize } from '@ungap/structured-clone';
-
-const jsonToString = (json: Object): string => {
-  const options = { json: true, lossy: true };
-  return JSON.stringify(serialize(json, options), null, 2);
-};
-
 type FSNode = {
   type: 'dir';
   name: string;
@@ -54,10 +45,6 @@ const cd = (target: '/' | '..' | string) => {
       return;
     }
   }
-};
-
-const ls = (lsParams: string[]) => {
-  const [dirOr] = lsParams;
 };
 
 const readLsDirLine = (name: string) => {
@@ -117,7 +104,6 @@ const calculateDirSize = (node: FSNode | FSLeaf): number => {
     const size = node.children
       .map(calculateDirSize)
       .reduce((acc, val) => acc + val);
-      
     DIR_SIZES[node.name] = size;
 
     return size;
@@ -137,11 +123,7 @@ export function run(input: string): number {
     0
   );
 
-    console.dir(DIR_SIZES)
+  console.log(DIR_SIZES);
 
   return finalSum;
 }
-
-readFile(join(__dirname, './input')).then((input) =>
-  console.log('Day 7 result:', run(input.toString()))
-);
