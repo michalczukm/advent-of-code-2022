@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 type FSNode = {
   type: 'dir';
   name: string;
@@ -19,6 +21,8 @@ const FILES_TREE: FSNode = {
   name: '/',
   children: [],
 };
+
+// const buildAbsolutePath = (node: FSNode)
 
 let currentNode: FSNode = FILES_TREE;
 
@@ -90,11 +94,8 @@ const processLine = (line: string) => {
     readLsFileLine(rest[0], +first);
     return;
   }
-};
 
-type DirSize = {
-  size: number;
-  name: string;
+  console.error('WTF?', line)
 };
 
 const DIR_SIZES: Record<string, number> = {};
@@ -103,8 +104,8 @@ const calculateDirSize = (node: FSNode | FSLeaf): number => {
   if (node.type === 'dir') {
     const size = node.children
       .map(calculateDirSize)
-      .reduce((acc, val) => acc + val);
-    DIR_SIZES[node.name] = size;
+      .reduce((acc, val) => acc + val, 0);
+    DIR_SIZES[node.name + randomUUID()] = size;
 
     return size;
   } else {
@@ -118,12 +119,11 @@ export function run(input: string): number {
   lines.map(processLine);
   calculateDirSize(FILES_TREE);
 
+
   const finalSum = Object.entries(DIR_SIZES).reduce(
     (acc, [_, size]) => (size <= 100000 ? acc + size : acc),
     0
   );
-
-  console.log(DIR_SIZES);
 
   return finalSum;
 }
