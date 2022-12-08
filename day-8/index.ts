@@ -5,7 +5,7 @@ type TreeState = {
   };
 };
 
-const calculateDistance = (
+export const calculateDistance = (
   array: number[],
   refItemIndex: number
 ): { left: number; right: number } => {
@@ -14,31 +14,35 @@ const calculateDistance = (
   const { leftPosition, rightPosition } = array.reduce(
     (acc, item, index) => {
       if (index < refItemIndex) {
-        acc.leftPosition = item >= refValue ? index : acc.leftPosition;
+        // @ts-ignore
+        acc.leftPosition = item >= refValue && array[acc.leftPosition!] != item ? index : acc.leftPosition;
       }
 
       if (index > refItemIndex) {
-        acc.rightPosition = item >= refValue ? index : acc.rightPosition;
+        // @ts-ignore
+        acc.rightPosition = item >= refValue && array[acc.rightPosition!] != item ? index : acc.rightPosition;
       }
 
       return acc;
     },
     {
-      leftPosition: 0,
-      rightPosition: array.length - 1,
+      leftPosition: undefined,
+      rightPosition: undefined
     }
   );
 
   return {
-    left: Math.abs(refItemIndex - leftPosition),
-    right: Math.abs(refItemIndex - rightPosition),
+    left: Math.abs(refItemIndex - (leftPosition ?? 0)),
+    right: Math.abs(refItemIndex - (rightPosition ?? array.length - 1)),
   };
 };
 
-const treeParams = (
+console.log('TEEEST', calculateDistance([6, 1, 6, 6, 6], 4));
+
+const calculateTreeParams = (
   row: number[],
   column: number[],
-  treePosition: { pRow: number; pCol: number },
+  treePosition: { pRow: number; pCol: number }
 ): TreeState => {
   const state = {
     top: {
@@ -59,7 +63,7 @@ const treeParams = (
     },
   };
 
-  const treeHeight = row[treePosition.pCol]
+  const treeHeight = row[treePosition.pCol];
 
   for (let rowNo = 0; rowNo < row.length; rowNo++) {
     const itemInRow = row[rowNo];
@@ -117,14 +121,10 @@ const getForestState = (input: string): TreeState[] => {
   for (let rowNo = 0; rowNo < treeMatrix.length; rowNo++) {
     for (let colNo = 0; colNo < treeMatrix[rowNo].length; colNo++) {
       forestState.push(
-        treeParams(
-          rows[rowNo],
-          cols[colNo],
-          {
-            pRow: rowNo,
-            pCol: colNo,
-          },
-        )
+        calculateTreeParams(rows[rowNo], cols[colNo], {
+          pRow: rowNo,
+          pCol: colNo,
+        })
       );
     }
   }
@@ -149,5 +149,8 @@ export function runPartTwo(input: string): number {
       1
     )
   );
+
+  console.log('scenicScores', scenicScores);
+
   return Math.max(...scenicScores);
 }
