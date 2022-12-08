@@ -9,7 +9,7 @@ describe("day 7", () => {
         expect(runPartOne(sampleInput)).toBe(95437)
     })
 
-    it.only("part two should work for sample input", async () => {
+    it("part two should work for sample input", async () => {
         const sampleInput = await (await readFile(join(__dirname, "./sample-input"))).toString()
 
         expect(runPartTwo(sampleInput)).toBe(24933642)

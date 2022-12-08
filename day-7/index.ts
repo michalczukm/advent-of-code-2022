@@ -16,23 +16,13 @@ type FSLeaf = {
 
 const isFSNode = (item: FSNode | FSLeaf): item is FSNode => item.type === 'dir';
 
-const FILES_TREE: FSNode = {
-  type: 'dir',
-  name: '/',
-  children: [],
-};
-
-// const buildAbsolutePath = (node: FSNode)
-
-let currentNode: FSNode = FILES_TREE;
-
-const cd = (target: '/' | '..' | string) => {
+const cd = (currentNode: FSNode, target: '/' | '..' | string) => {
   switch (target) {
     case '/':
-      return;
+      return currentNode;
     case '..':
       currentNode.parent && (currentNode = currentNode.parent);
-      return;
+      return currentNode;
     default: {
       const matchedChild = currentNode.children
         .filter(isFSNode)
@@ -46,80 +36,95 @@ const cd = (target: '/' | '..' | string) => {
             parent: currentNode,
             children: [],
           });
-      return;
+      return currentNode;
     }
   }
 };
 
-const readLsDirLine = (name: string) => {
+const readLsDirLine = (currentNode: FSNode, name: string) => {
   currentNode.children.push({
     name,
     type: 'dir',
     children: [],
     parent: currentNode,
   });
+
+  return currentNode;
 };
 
-const readLsFileLine = (name: string, size: number) => {
+const readLsFileLine = (currentNode: FSNode, name: string, size: number) => {
   currentNode.children.push({
     name,
     type: 'file',
     parent: currentNode,
     size,
   });
+
+  return currentNode;
 };
 
 type Command = 'cd' | 'ls';
 
-const processLine = (line: string) => {
+const processLine = (currentNode: FSNode, line: string): FSNode => {
   const [first, ...rest] = line.split(' ');
 
   if (first === '$') {
     const [command, ...params] = rest as [Command, string, string];
     if (command === 'cd') {
-      cd(params[0]);
-      return;
+      return cd(currentNode, params[0]);
     }
     if (command === 'ls') {
-      return;
+      return currentNode;
     }
   }
 
   if (first === 'dir') {
-    readLsDirLine(rest[0]);
-    return;
+    return readLsDirLine(currentNode, rest[0]);
   }
 
   if (typeof +first === 'number') {
-    readLsFileLine(rest[0], +first);
-    return;
+    return readLsFileLine(currentNode, rest[0], +first);
   }
 
-  console.error('WTF?', line);
+  return currentNode;
 };
 
-const DIR_SIZES: Record<string, number> = {};
-
-const calculateDirSize = (node: FSNode | FSLeaf): number => {
+const calculateDirSize = (
+  node: FSNode | FSLeaf,
+  dirSizes: Record<string, number> = {}
+): [number, Record<string, number>] => {
   if (node.type === 'dir') {
     const size = node.children
-      .map(calculateDirSize)
-      .reduce((acc, val) => acc + val, 0);
-    DIR_SIZES[`${node.name}_${randomUUID()}`] = size;
+      .map((child) => calculateDirSize(child, dirSizes))
+      .reduce((acc, [size]) => acc + size, 0);
 
-    return size;
+    dirSizes[`${node.name}_${randomUUID()}`] = size;
+
+    return [size, dirSizes];
   } else {
-    return node.size;
+    return [node.size, dirSizes];
   }
+};
+
+const calculateDirSizes = (input: string) => {
+  const lines = input.split('\n');
+  const filesTree: FSNode = {
+    type: 'dir',
+    name: '/',
+    children: [],
+  };
+  lines.reduce(
+    (currentNode, line) => processLine(currentNode, line),
+    filesTree
+  );
+
+  const [, dirSizes] = calculateDirSize(filesTree);
+  return dirSizes;
 };
 
 export function runPartOne(input: string): number {
-  const lines = input.split('\n');
-
-  lines.map(processLine);
-  calculateDirSize(FILES_TREE);
-
-  const finalSum = Object.entries(DIR_SIZES).reduce(
+  const dirSizes = calculateDirSizes(input);
+  const finalSum = Object.entries(dirSizes).reduce(
     (acc, [_, size]) => (size <= 100000 ? acc + size : acc),
     0
   );
@@ -128,19 +133,16 @@ export function runPartOne(input: string): number {
 }
 
 export function runPartTwo(input: string): number {
-  const lines = input.split('\n');
-
-  lines.map(processLine);
-  calculateDirSize(FILES_TREE);
+  const dirSizes = calculateDirSizes(input);
 
   const REQUIRED_FREE_SPACE = 30000000;
   const TOTAL_SYSTEM_SPACE = 70000000;
-  const TOTAL_USED_SPACE = Object.values(DIR_SIZES).at(-1) || 0;
+  const TOTAL_USED_SPACE = Object.values(dirSizes).at(-1) || 0;
 
   const requiredSpace =
     REQUIRED_FREE_SPACE - (TOTAL_SYSTEM_SPACE - TOTAL_USED_SPACE);
 
-  const sizeOfDirToRemove = Object.values(DIR_SIZES)
+  const sizeOfDirToRemove = Object.values(dirSizes)
     .filter((size) => size >= requiredSpace)
     .sort((a, b) => a - b);
 
