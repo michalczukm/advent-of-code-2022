@@ -15,19 +15,22 @@ export const calculateDistance = (
     (acc, item, index) => {
       if (index < refItemIndex) {
         // @ts-ignore
-        acc.leftPosition = item >= refValue && array[acc.leftPosition!] != item ? index : acc.leftPosition;
+        acc.leftPosition = item >= refValue ? index : acc.leftPosition;
       }
 
-      if (index > refItemIndex) {
+      if (index > refItemIndex && !acc.rightPosition) {
         // @ts-ignore
-        acc.rightPosition = item >= refValue && array[acc.rightPosition!] != item ? index : acc.rightPosition;
+        acc.rightPosition =
+          item >= refValue && array[acc.rightPosition!] != item
+            ? index
+            : acc.rightPosition;
       }
 
       return acc;
     },
     {
       leftPosition: undefined,
-      rightPosition: undefined
+      rightPosition: undefined,
     }
   );
 
@@ -36,8 +39,6 @@ export const calculateDistance = (
     right: Math.abs(refItemIndex - (rightPosition ?? array.length - 1)),
   };
 };
-
-console.log('TEEEST', calculateDistance([6, 1, 6, 6, 6], 4));
 
 const calculateTreeParams = (
   row: number[],
@@ -149,8 +150,6 @@ export function runPartTwo(input: string): number {
       1
     )
   );
-
-  console.log('scenicScores', scenicScores);
 
   return Math.max(...scenicScores);
 }
