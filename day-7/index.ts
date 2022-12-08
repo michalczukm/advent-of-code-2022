@@ -95,7 +95,7 @@ const processLine = (line: string) => {
     return;
   }
 
-  console.error('WTF?', line)
+  console.error('WTF?', line);
 };
 
 const DIR_SIZES: Record<string, number> = {};
@@ -105,7 +105,7 @@ const calculateDirSize = (node: FSNode | FSLeaf): number => {
     const size = node.children
       .map(calculateDirSize)
       .reduce((acc, val) => acc + val, 0);
-    DIR_SIZES[node.name + randomUUID()] = size;
+    DIR_SIZES[`${node.name}_${randomUUID()}`] = size;
 
     return size;
   } else {
@@ -113,12 +113,11 @@ const calculateDirSize = (node: FSNode | FSLeaf): number => {
   }
 };
 
-export function run(input: string): number {
+export function runPartOne(input: string): number {
   const lines = input.split('\n');
 
   lines.map(processLine);
   calculateDirSize(FILES_TREE);
-
 
   const finalSum = Object.entries(DIR_SIZES).reduce(
     (acc, [_, size]) => (size <= 100000 ? acc + size : acc),
@@ -126,4 +125,24 @@ export function run(input: string): number {
   );
 
   return finalSum;
+}
+
+export function runPartTwo(input: string): number {
+  const lines = input.split('\n');
+
+  lines.map(processLine);
+  calculateDirSize(FILES_TREE);
+
+  const REQUIRED_FREE_SPACE = 30000000;
+  const TOTAL_SYSTEM_SPACE = 70000000;
+  const TOTAL_USED_SPACE = Object.values(DIR_SIZES).at(-1) || 0;
+
+  const requiredSpace =
+    REQUIRED_FREE_SPACE - (TOTAL_SYSTEM_SPACE - TOTAL_USED_SPACE);
+
+  const sizeOfDirToRemove = Object.values(DIR_SIZES)
+    .filter((size) => size >= requiredSpace)
+    .sort((a, b) => a - b);
+
+  return sizeOfDirToRemove[0];
 }
