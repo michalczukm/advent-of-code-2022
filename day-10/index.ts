@@ -6,26 +6,26 @@ type CycleState = {
   command?: Command;
 };
 
-type EventsStateLog = CycleState[];
+type CpuInstructions = CycleState[];
 
 const executeCommand = (
   command: Command,
-  state: EventsStateLog
-): EventsStateLog => {
+  state: CpuInstructions
+): CpuInstructions => {
   const lastState = state.at(-1)!;
 
   const commandToState = {
-    // I shouls store here DURING cicle, not after
+    // I should store here DURING cycle, not after. But on well. 2 hacks due to that :badpockerface:
     addx: () => [
       {
         cycleNo: lastState.cycleNo + 1,
         registerX: lastState.registerX,
-        command: {...command, step: '1 of 2'},
+        command: { ...command, step: '1 of 2' },
       },
       {
         cycleNo: lastState.cycleNo + 2,
         registerX: lastState.registerX + command.value,
-        command: {...command, step: '2 of 2'},
+        command: { ...command, step: '2 of 2' },
       },
     ],
     noop: () => [
@@ -40,30 +40,20 @@ const executeCommand = (
   return [...state, ...commandToState[command.operation]()];
 };
 
-const registerXAt = (n: number, state: EventsStateLog): number => {
-  const signal = state[n - 1];
+const registerXAt = (n: number, state: CpuInstructions): number =>
+  state[n - 1].registerX;
 
-  console.log(`signal at "${n}": `, signal);
+const calculateSignalStrength = (n: number, state: CpuInstructions): number =>
+  registerXAt(n, state) * n;
 
-  return signal.registerX;
-};
-
-const calculateSignalStrength = (n: number, state: EventsStateLog): number => {
-  const strength = registerXAt(n, state) * n;
-
-  console.log(`strength at ${n}: `, strength);
-
-  return strength;
-};
-
-const calculateSignalsStrength = (state: EventsStateLog): number => {
+const calculateSignalsStrength = (state: CpuInstructions): number => {
   return [20, 60, 100, 140, 180, 220].reduce(
     (sum, n) => sum + calculateSignalStrength(n, state),
     0
   );
 };
 
-export function runPartOne(input: string): number {
+const execute = (input: string): CpuInstructions => {
   const commands = input.split('\n').map((line) => {
     const [operation, value] = line.split(' ');
     return {
@@ -72,7 +62,7 @@ export function runPartOne(input: string): number {
     };
   }) as Command[];
 
-  const initialState: EventsStateLog = [
+  const initialState: CpuInstructions = [
     {
       cycleNo: 0,
       registerX: 1,
@@ -80,16 +70,47 @@ export function runPartOne(input: string): number {
     },
   ];
 
-  const finalState = commands.reduce(
+  return commands.reduce(
     (prevState, command) => executeCommand(command, prevState),
     initialState
   );
+};
 
-  console.log('finalState:', finalState.filter(v => v.cycleNo >= 170 && v.cycleNo <= 231));
-
-  return calculateSignalsStrength(finalState);
+export function runPartOne(input: string): number {
+  return calculateSignalsStrength(execute(input));
 }
 
+const displayImage = (state: CycleState[]): void => {
+  const getCharForCRT = (crtPosition: number, xPosition: number): '#' | '.' => {
+    return isSpriteVisible(xPosition, crtPosition) ? '#' : '.';
+  };
+
+  console.log('\n');
+
+  state.forEach((cycle, index) => {
+    if (index === 0) {
+      return;
+    }
+    process.stdout.write(
+      getCharForCRT((index - 1) % 40, state[index - 1].registerX)
+    );
+    if (cycle.cycleNo % 40 === 0) {
+      process.stdout.write('\n');
+    }
+  });
+
+  console.log('\n');
+};
+
+const isSpriteVisible = (
+  xPosition: number,
+  currentCrtPosition: number
+): boolean => {
+  return [xPosition - 1, xPosition, xPosition + 1].includes(currentCrtPosition);
+};
+
 export function runPartTwo(input: string): number {
+  displayImage(execute(input));
+
   return 1;
 }
