@@ -1,5 +1,5 @@
 type Move = {
-  direction: 'L' | 'R' | 'U' | 'D';
+  direction: 'L' | 'R' | 'U' | 'D' | 'LD' | 'LU' | 'RD' | 'RU';
 };
 
 type Point = { x: number; y: number };
@@ -29,19 +29,74 @@ const GAME_MAP: GameHistory = [
   },
 ];
 
-const calculateNextPoint = (move: Move, previous: Point): Point => {
+const calculateNextPoint = (
+  direction: Move['direction'],
+  previous: Point
+): Point => {
   const moveOperations = {
     L: { x: previous.x - 1, y: previous.y },
     R: { x: previous.x + 1, y: previous.y },
     U: { x: previous.x, y: previous.y + 1 },
     D: { x: previous.x, y: previous.y - 1 },
+    LD: { x: previous.x - 1, y: previous.y - 1 },
+    LU: { x: previous.x - 1, y: previous.y + 1 },
+    RD: { x: previous.x + 1, y: previous.y - 1 },
+    RU: { x: previous.x + 1, y: previous.y + 1 },
   } as const;
 
-  return moveOperations[move.direction];
+  return moveOperations[direction];
 };
 
-const calculateTailPosition = (previousTail: Point, newHead: Point): Point => {
-  // FOR NOW
+export const calculateTailPosition = (
+  previousTail: Point,
+  newHead: Point
+): Point => {
+  const distance = Math.floor(
+    Math.sqrt(
+      Math.pow(previousTail.x - newHead.x, 2) +
+        Math.pow(previousTail.y - newHead.y, 2)
+    )
+  );
+
+  if (distance <= 1) {
+    return previousTail;
+  }
+
+  const vector = {
+    x: newHead.x - previousTail.x,
+    y: newHead.y - previousTail.y,
+  };
+
+  // move left
+  if (vector.x < 0 && vector.y === 0)
+    return calculateNextPoint('L', previousTail);
+  // move right
+  if (vector.x > 0 && vector.y === 0)
+    return calculateNextPoint('R', previousTail);
+
+  // move up
+  if (vector.x === 0 && vector.y > 0)
+    return calculateNextPoint('U', previousTail);
+  // move down
+  if (vector.x === 0 && vector.y < 0)
+    return calculateNextPoint('D', previousTail);
+
+  // move left up
+  if (vector.x < 0 && vector.y > 0)
+    return calculateNextPoint('LU', previousTail);
+  // move left down
+  if (vector.x < 0 && vector.y < 0)
+    return calculateNextPoint('LD', previousTail);
+
+  // move right up
+  if (vector.x > 0 && vector.y > 0)
+    return calculateNextPoint('RU', previousTail);
+  // move right down
+  if (vector.x > 0 && vector.y < 0)
+    return calculateNextPoint('RD', previousTail);
+
+  console.log('distance: ', distance);
+
   return previousTail;
 };
 
@@ -61,11 +116,11 @@ const visualizeMap = (game: GameHistory) => {
   const currentPoint = {
     head: {
       ...gamePoint.head,
-      y: - gamePoint.head.y + height - 1,
+      y: -gamePoint.head.y + height - 1,
     },
     tail: {
       ...gamePoint.tail,
-      y: - gamePoint.tail.y + height - 1,
+      y: -gamePoint.tail.y + height - 1,
     },
   };
 
@@ -86,7 +141,7 @@ const visualizeMap = (game: GameHistory) => {
 const makeMove = (move: Move) => {
   const state = GAME_MAP.at(-1)!;
 
-  const newHead = calculateNextPoint(move, state.head);
+  const newHead = calculateNextPoint(move.direction, state.head);
   const newTail = calculateTailPosition(state.tail, newHead);
 
   GAME_MAP.push({
@@ -109,6 +164,18 @@ const visualizeInitialStep = (initial: GameHistory) => {
   visualizeMap(initial);
 };
 
+const calculateTailVisits = (game: GameHistory): number => {
+  const uniquePoints = [
+    ...new Map(
+      game.map(state => state.tail)
+      .map(point => [JSON.stringify(point), point])
+    )
+    .values()
+  ]
+
+  return uniquePoints.length;
+}
+
 export function runPartOne(input: string): number {
   const commands = input.split('\n').map((line) => {
     const [direction, steps] = line.split(' ');
@@ -120,9 +187,9 @@ export function runPartOne(input: string): number {
 
   visualizeInitialStep(GAME_MAP);
 
-  [commands[0], commands[1]].forEach(executeCommand);
+  commands.forEach(executeCommand);
 
-  return 1;
+  return calculateTailVisits(GAME_MAP);
 }
 
 export function runPartTwo(input: string): number {
