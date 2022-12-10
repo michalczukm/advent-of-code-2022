@@ -4,6 +4,8 @@ type Move = {
 
 type Point = { x: number; y: number };
 
+const LOG = false;
+
 type StateSnapshot = {
   // the move AFTER which we have current head & tail positions
   move?: Move;
@@ -102,7 +104,10 @@ export const calculateTailPosition = (
 
 const isSamePoint = (a: Point, b: Point): boolean => a.x === b.x && a.y === b.y;
 
-const visualizeMap = (game: GameHistory) => {
+const visualizeMap = (game: GameHistory): void => {
+  if (!LOG) {
+    return;
+  }
   const width =
     Math.max(5, ...game.flatMap((state) => [state.head.x, state.tail.x])) + 1;
   const height =
@@ -159,7 +164,10 @@ const executeCommand = ({ direction, steps }: Command) => {
   Array.from(Array(steps)).forEach((_) => makeMove({ direction }));
 };
 
-const visualizeInitialStep = (initial: GameHistory) => {
+const visualizeInitialStep = (initial: GameHistory): void => {
+  if (!LOG) {
+    return;
+  }
   console.log(`\n\n== INITIAL ==`);
   visualizeMap(initial);
 };
@@ -167,14 +175,14 @@ const visualizeInitialStep = (initial: GameHistory) => {
 const calculateTailVisits = (game: GameHistory): number => {
   const uniquePoints = [
     ...new Map(
-      game.map(state => state.tail)
-      .map(point => [JSON.stringify(point), point])
-    )
-    .values()
-  ]
+      game
+        .map((state) => state.tail)
+        .map((point) => [JSON.stringify(point), point])
+    ).values(),
+  ];
 
   return uniquePoints.length;
-}
+};
 
 export function runPartOne(input: string): number {
   const commands = input.split('\n').map((line) => {
