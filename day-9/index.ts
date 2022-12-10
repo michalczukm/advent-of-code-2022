@@ -5,12 +5,12 @@ type Move = {
 type Point = { x: number; y: number };
 
 const LOG = false;
+const KNOTS = 10;
 
 type StateSnapshot = {
   // the move AFTER which we have current head & tail positions
   move?: Move;
-  head: Point;
-  tail: Point;
+  heads: Point[];
 };
 
 type GameHistory = [StateSnapshot, ...StateSnapshot[]];
@@ -20,14 +20,10 @@ type Command = Move & { steps: number };
 const GAME_MAP: GameHistory = [
   {
     move: undefined,
-    head: {
+    heads: Array.from(Array(KNOTS)).map(() => ({
       x: 0,
       y: 0,
-    },
-    tail: {
-      x: 0,
-      y: 0,
-    },
+    })),
   },
 ];
 
@@ -109,34 +105,38 @@ const visualizeMap = (game: GameHistory): void => {
     return;
   }
   const width =
-    Math.max(5, ...game.flatMap((state) => [state.head.x, state.tail.x])) + 1;
+    Math.max(22, ...game.flatMap((state) => state.heads.map((h) => h.x))) + 1;
   const height =
-    Math.max(4, ...game.flatMap((state) => [state.head.y, state.tail.y])) + 1;
+    Math.max(25, ...game.flatMap((state) => state.heads.map((h) => h.y))) + 1;
 
   const xArray = Array.from(Array(width).keys());
   const yArray = Array.from(Array(height).keys());
 
   // moved by height to start from LEFT BOTTOM corner
   const gamePoint = game.at(-1)!;
+  const [head, ...restKnots] = gamePoint.heads;
   const currentPoint = {
     head: {
-      ...gamePoint.head,
-      y: -gamePoint.head.y + height - 1,
+      ...head,
+      y: -head.y + height - 1,
     },
-    tail: {
-      ...gamePoint.tail,
-      y: -gamePoint.tail.y + height - 1,
-    },
+    restKnots: restKnots.map((knot) => ({
+      ...knot,
+      y: -knot.y + height - 1,
+    })),
+  };
+
+  const getCharFor = (point: Point): string => {
+    const knotNo =
+      currentPoint.restKnots.findIndex((knot) => isSamePoint(point, knot)) + 1;
+
+    if (isSamePoint(point, currentPoint.head)) return 'H';
+    else if (knotNo) return knotNo.toString();
+    else return '.';
   };
 
   yArray.forEach((y) => {
-    xArray.forEach((x) => {
-      const printPoint = { x, y };
-      if (isSamePoint(printPoint, currentPoint.head)) process.stdout.write('H');
-      else if (isSamePoint(printPoint, currentPoint.tail))
-        process.stdout.write('T');
-      else process.stdout.write('.');
-    });
+    xArray.forEach((x) => process.stdout.write(getCharFor({ x, y })));
     process.stdout.write('\n');
   });
 
@@ -145,23 +145,29 @@ const visualizeMap = (game: GameHistory): void => {
 
 const makeMove = (move: Move) => {
   const state = GAME_MAP.at(-1)!;
+  const [head, ...restKnots] = state.heads;
 
-  const newHead = calculateNextPoint(move.direction, state.head);
-  const newTail = calculateTailPosition(state.tail, newHead);
+  const newHead = calculateNextPoint(move.direction, head);
+
+  const newKnots: Point[] = [];
+  restKnots.reduce((previousKnot, knot) => {
+    const newKnot = calculateTailPosition(knot, previousKnot);
+    newKnots.push(newKnot);
+    return newKnot;
+  }, newHead);
 
   GAME_MAP.push({
-    head: newHead,
-    tail: newTail,
+    heads: [newHead, ...newKnots],
     move,
   });
 
-  visualizeMap(GAME_MAP);
 };
 
 const executeCommand = ({ direction, steps }: Command) => {
   console.log(`\n\n== ${direction} ${steps} ==`);
-
+  
   Array.from(Array(steps)).forEach((_) => makeMove({ direction }));
+  visualizeMap(GAME_MAP);
 };
 
 const visualizeInitialStep = (initial: GameHistory): void => {
@@ -176,7 +182,7 @@ const calculateTailVisits = (game: GameHistory): number => {
   const uniquePoints = [
     ...new Map(
       game
-        .map((state) => state.tail)
+        .map((state) => state.heads.at(-1))
         .map((point) => [JSON.stringify(point), point])
     ).values(),
   ];
