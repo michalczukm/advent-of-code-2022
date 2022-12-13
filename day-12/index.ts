@@ -16,6 +16,7 @@ const pointToKey = (point: { x: number; y: number }): string => {
 
 const generatePath = (
   pointsMap: Map<string, Point>,
+  finalCondition: (point: Point) => boolean,
   startingPoint: Point,
   currentPath: Point[],
   permutations: Point[][],
@@ -30,7 +31,7 @@ const generatePath = (
     return min;
   }
 
-  if (startingPoint.isEnd) {
+  if (finalCondition(startingPoint)) {
     permutations.push(currentPath);
     if (min > steps) {
       min = steps;
@@ -64,12 +65,19 @@ const generatePath = (
 
   return Math.min(
     ...options.map((point) =>
-      generatePath(pointsMap, point, [...currentPath], permutations, min)
+      generatePath(
+        pointsMap,
+        finalCondition,
+        point,
+        [...currentPath],
+        permutations,
+        min
+      )
     )
   );
 };
 
-export function runPartOne(input: string): number {
+const getPoints = (input: string) => {
   const points: Point[] = input.split('\n').flatMap((line, rowNo) =>
     line
       .split('')
@@ -88,10 +96,18 @@ export function runPartOne(input: string): number {
       })
   );
 
-  console.time('run part one;');
   const pointsMap = new Map(points.map((point) => [pointToKey(point), point]));
+
+  return [points, pointsMap] as const;
+};
+
+export function runPartOne(input: string): number {
+  const [points, pointsMap] = getPoints(input);
+
+  console.time('run part one;');
   const min = generatePath(
     pointsMap,
+    (point) => point.isEnd,
     points.find((p) => p.isStart)!,
     [],
     [],
@@ -103,5 +119,18 @@ export function runPartOne(input: string): number {
 }
 
 export function runPartTwo(input: string): number {
-  return 1;
+  const [points, pointsMap] = getPoints(input);
+
+  console.time('run part two;');
+  const min = generatePath(
+    pointsMap,
+    (point) => point.numericValue === 0,
+    points.find((p) => p.isStart)!,
+    [],
+    [],
+    Infinity
+  );
+
+  console.timeEnd('run part two;');
+  return min - 1;
 }

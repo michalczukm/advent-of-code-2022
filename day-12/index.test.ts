@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { runPartOne, runPartTwo } from '.';
 
 describe(__dirname, () => {
-  it.only('part one should work for sample input', async () => {
+  it('part one should work for sample input', async () => {
     const sampleInput = await (
       await readFile(join(__dirname, './sample-input'))
     ).toString();
@@ -16,6 +16,6 @@ describe(__dirname, () => {
       await readFile(join(__dirname, './sample-input'))
     ).toString();
 
-    expect(runPartTwo(sampleInput)).toBe(13140);
+    expect(runPartTwo(sampleInput)).toBe(29);
   });
 });

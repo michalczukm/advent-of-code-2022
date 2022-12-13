@@ -4,5 +4,5 @@ import { runPartOne, runPartTwo } from '.';
 
 readFile(join(__dirname, './input')).then((input) => {
   console.log(`${__dirname} result, part 1:`, runPartOne(input.toString()));
-  // console.log(`${__dirname} result, part 2:`, runPartTwo(input.toString()));
+  console.log(`${__dirname} result, part 2:`, runPartTwo(input.toString()));
 });
