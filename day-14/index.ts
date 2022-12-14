@@ -1,13 +1,13 @@
 type Point = { x: number; y: number };
 type Rocks = Point[];
 
-const LOG = true;
-
-const isSamePoint = (a: Point, b: Point): boolean => a.x === b.x && a.y === b.y;
+const LOG = false;
 
 const pointToKey = (point: { x: number; y: number }): string => {
   return `[${point.x},${point.y}]`;
 };
+
+const isSamePoint = (a: Point, b: Point): boolean => a.x === b.x && a.y === b.y;
 
 const visualizeMap = (
   rocks: Rocks,
@@ -20,9 +20,9 @@ const visualizeMap = (
 
   const minX = Math.min(...rocks.map((coordinates) => coordinates.x));
   const width =
-    Math.max(...rocks.map((coordinates) => coordinates.x)) - minX + 1;
+    Math.max(...rocks.map((coordinates) => coordinates.x)) - minX + 20; //1;
 
-  const height = Math.max(...rocks.map((coordinates) => coordinates.y)) - 0 + 1;
+  const height = Math.max(...rocks.map((coordinates) => coordinates.y)) - 0 + 5; //1
 
   const xArray = Array.from(Array(width).keys());
   const yArray = Array.from(Array(height).keys());
@@ -94,18 +94,25 @@ const buildRocks = (input: string): Point[] =>
 const dropSandUnits = (
   rocksKeys: Rocks,
   sandHole: Point,
-  sand: Point[]
+  sand: Point[],
+  infiniteFloor: boolean
 ): Point[] => {
   const obstacles = new Set<string>([...rocksKeys, ...sand].map(pointToKey));
-  const abyssBorder = Math.max(...rocksKeys.map((r) => r.y));
+  const abyssBorder =
+    Math.max(...rocksKeys.map((r) => r.y)) + (infiniteFloor ? 1 : 0);
+
+  const hasMeetInifiniteFloor = (point: Point) => point.y >= abyssBorder;
+  const exitCriteria = (point: Point, isBlocked: boolean): boolean =>
+    infiniteFloor ? isBlocked && isSamePoint(point, sandHole) : point.y >= abyssBorder;
 
   let loop = undefined;
   const sandDrops: Point[] = [];
   let inTheGame = true;
-  while (inTheGame && (!loop || loop > 0)) {
+  while (inTheGame && (loop === undefined || loop > 0)) {
     loop && loop--;
     let dropping = true;
     let point = { ...sandHole };
+
     while (dropping) {
       const down = {
         x: point.x,
@@ -122,36 +129,40 @@ const dropSandUnits = (
         y: point.y + 1,
       };
 
-      const isBlockedDown = obstacles.has(pointToKey(down));
-      const isBlockedLeft = obstacles.has(pointToKey(left));
-      const isBlockedRight = obstacles.has(pointToKey(right));
+      const isFloor = infiniteFloor && hasMeetInifiniteFloor(point);
 
-      if (isBlockedDown && isBlockedLeft && isBlockedRight) {
+      const isBlockedDown = isFloor || obstacles.has(pointToKey(down));
+      const isBlockedLeft = isFloor || obstacles.has(pointToKey(left));
+      const isBlockedRight = isFloor || obstacles.has(pointToKey(right));
+
+      const isFullyBlocked = isBlockedDown && isBlockedLeft && isBlockedRight;
+
+      if (exitCriteria(point, isFullyBlocked)) {
         dropping = false;
+        inTheGame = false;
+        continue;
+      }
+
+      if (isFullyBlocked) {
         obstacles.add(pointToKey(point));
+        dropping = false;
         continue;
       }
 
       if (isBlockedLeft && isBlockedDown) {
         point = { ...right };
-        obstacles.add(pointToKey(point));
         continue;
       }
 
       if (isBlockedDown) {
         point = { ...left };
-        obstacles.add(pointToKey(point));
+        // obstacles.add(pointToKey(point));
         continue;
       }
 
       point = { ...down };
-
-      if (point.y >= abyssBorder) {
-        dropping = false;
-        inTheGame = false;
-        continue;
-      }
     }
+    obstacles.add(pointToKey(point));
     sandDrops.push(point);
   }
 
@@ -162,12 +173,24 @@ export function runPartOne(input: string): number {
   const rocks = buildRocks(input);
   const sandHole: Point = { x: 500, y: 0 };
 
-  const drops = dropSandUnits(rocks, sandHole, []);
+  console.time('part 1');
+  const drops = dropSandUnits(rocks, sandHole, [], false);
+  console.timeEnd('part 1');
+
   visualizeMap(rocks, sandHole, drops);
 
-  return drops.length;
+  return drops.length - 1;
 }
 
 export function runPartTwo(input: string): number {
-  return 1;
+  const rocks = buildRocks(input);
+  const sandHole: Point = { x: 500, y: 0 };
+
+  console.time('part 2');
+  const drops = dropSandUnits(rocks, sandHole, [], true);
+  console.timeEnd('part 2');
+
+  visualizeMap(rocks, sandHole, drops);
+
+  return drops.length;
 }
